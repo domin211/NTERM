@@ -36,6 +36,12 @@
         "data": {
           "zone": "Room"
         }
+      },
+      "legacy": {
+        "title": "Change existing room sensor",
+        "data": {
+          "sensor": "External temperature sensor"
+        }
       }
     },
     "abort": {
