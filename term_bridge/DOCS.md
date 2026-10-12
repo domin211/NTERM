@@ -38,7 +38,7 @@ External control has global ±0.5 °C hysteresis and a 10-minute hold between su
 
 ## Alternative: manually published MQTT sensor temperatures
 
-Advanced users can configure the add-on's `external_sensors` option directly, without installing the Sensor Mapping integration:
+Older NTERM installations may contain manual `external_sensors` entries in saved options. The add-on settings no longer show this control; use the Sensor Manager instead. This is the legacy syntax for reference:
 
 ```yaml
 external_sensors:
@@ -46,6 +46,6 @@ external_sensors:
     topic: hotel/room101/temperature
 ```
 
-Here `usb0_ttyusb0_0` is a zone key from `term_bridge/usb0_ttyusb0_0/state`. The topic must publish a **plain Celsius number** (e.g. `21.5`) whenever the reading changes and periodically (more frequently than every 15 minutes). Do not retain the sensor reading, because a retained historical reading could be mistaken for a new measurement. Leave `external_sensors: []` if you are not using manual mappings.
+Here `usb0_ttyusb0_0` is a zone key from `term_bridge/usb0_ttyusb0_0/state`. The topic must publish a **plain Celsius number** (e.g. `21.5`) whenever the reading changes and periodically (more frequently than every 15 minutes). Do not retain the sensor reading, because a retained historical reading could be mistaken for a new measurement. Unmapped rooms continue to use the original HMPD thermostat. Existing manual mappings are still recognized temporarily for backward compatibility.
 
 **Do not map the same room using both methods.** Use the UI mapping integration for Home Assistant temperature sensors.
