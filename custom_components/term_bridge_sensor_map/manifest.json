@@ -1,6 +1,6 @@
 {
   "domain": "term_bridge_sensor_map",
-  "name": "TERM Bridge Sensor Mapping",
+  "name": "NTERM Sensor Mapping",
   "version": "0.1.0",
   "documentation": "https://github.com/domin211/NTERM",
   "dependencies": [
