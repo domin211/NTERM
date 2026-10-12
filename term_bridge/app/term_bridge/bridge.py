@@ -573,6 +573,10 @@ class TERMBridge:
                     return
                 sensor_topic = f"{sensor_prefix}{zone_key}"
                 old_topic = self.external_by_zone.get(zone_key)
+                # A retained mapping is replayed on reconnect; do not reset the
+                # thermostat or discard a pending command for the same mapping.
+                if old_topic == sensor_topic and payload:
+                    return
                 if old_topic and self.external_by_topic.get(old_topic) == zone_key:
                     del self.external_by_topic[old_topic]
                 if payload:
