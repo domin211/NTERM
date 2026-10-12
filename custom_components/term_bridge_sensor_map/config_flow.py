@@ -5,6 +5,8 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import entity_registry as er, device_registry as dr, selector
 
+from .mapping import mapping_for_entry
+
 DOMAIN = "term_bridge_sensor_map"
 MANAGER_ID = "nterm_sensor_manager"
 
@@ -57,11 +59,9 @@ class NtermSensorMapOptionsFlow(config_entries.OptionsFlow):
         self._entry = config_entry
 
     def _mappings(self):
-        return dict(self._entry.options.get("mappings", self._entry.data.get("mappings", {})))
+        return mapping_for_entry(self._entry)
 
     async def async_step_init(self, user_input=None):
-        if "zone" in self._entry.data:
-            return await self.async_step_legacy(user_input)
         if user_input is not None:
             if user_input["action"] == "add":
                 return await self.async_step_add()
@@ -81,14 +81,6 @@ class NtermSensorMapOptionsFlow(config_entries.OptionsFlow):
                 ),
             }),
         )
-
-    async def async_step_legacy(self, user_input=None):
-        if user_input is not None:
-            return self.async_create_entry(title="", data={"sensor": user_input["sensor"]})
-        return self.async_show_form(step_id="legacy", data_schema=vol.Schema({
-            vol.Required("sensor", default=self._entry.options.get("sensor", self._entry.data["sensor"])): sensor_field()
-        }))
-
 
     async def async_step_add(self, user_input=None):
         rooms = room_options(self.hass)
