@@ -73,8 +73,8 @@ class NtermSensorMapOptionsFlow(config_entries.OptionsFlow):
                 vol.Required("action"): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[
-                            selector.SelectOptionDict(value="add", label="Add or change room sensor"),
-                            selector.SelectOptionDict(value="remove", label="Remove room sensor"),
+                            {"value": "add", "label": "Add or change room sensor"},
+                            {"value": "remove", "label": "Remove room sensor"},
                         ],
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
