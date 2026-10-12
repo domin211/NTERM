@@ -144,3 +144,35 @@ def test_existing_heating_zone_mapping_retains_heating_state():
     ))
     assert zone.heat_requested is True
     assert zone.target_temp is not None
+
+
+def test_live_mqtt_mapping_updates_climate_current_temperature():
+    """A selected HA sensor's MQTT reading must be visible in climate state."""
+    from types import SimpleNamespace
+    import json
+
+    bridge, zone, jobs = make_bridge()
+    # Switch away from the manually configured external topic and use the UI mapping.
+    bridge.external_by_zone.clear()
+    bridge.external_by_topic.clear()
+    zone.external_topic = None
+    published = []
+    bridge.mqtt.publish = lambda topic, payload, **kwargs: published.append((topic, payload))  # type: ignore[method-assign]
+    mapping_topic = f"{bridge.options.base_topic}/external_map/{zone.unique_id}"
+    value_topic = f"{bridge.options.base_topic}/external/{zone.unique_id}"
+    bridge._on_message(None, None, SimpleNamespace(topic=mapping_topic, payload=b"sensor.pokoj_6_teplota"))
+    bridge._on_message(None, None, SimpleNamespace(topic=value_topic, payload=b"21.75"))
+    assert zone.external_temp == 21.75
+    assert zone.external_topic == value_topic
+    state_topic = bridge.topics.state(zone.unique_id)
+    state = [json.loads(payload) for topic, payload in published if topic == state_topic]
+    assert state[-1]["current_temp"] == 21.75
+    assert state[-1]["target_temp"] == zone.target_temp
+
+
+def test_unmapped_room_keeps_original_hmpd_temperature():
+    bridge, zone, jobs = make_bridge()
+    zone.external_topic = None
+    zone.current_temp = 21.0
+    zone.external_temp = 34.0
+    assert bridge.topics.state_payload(zone, bridge.temp_range, "heat")["current_temp"] == 21.0
