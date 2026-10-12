@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0 (proposed)
+
+- Introduced one NTERM Sensor Manager for multiple rooms with Add/Change/Remove controls.
+- Migrates existing version-1 room entries to version 2 without discarding sensor mappings.
+- Elects exactly one temperature publisher per room across manager and legacy entries.
+- Stores pending MQTT mapping deletions durably and retries failed MQTT writes every minute.
+- Preserved existing per-room entries during transition and added mapped-room overview.
+- Added mapping and external-temperature receipt diagnostics to the NTERM add-on logs.
+- Added a regression test for MQTT temperature propagation into climate state.
+
 ## 0.7.1
 
 - Hardcoded the sensor-mapping MQTT prefix to `term_bridge` and removed the base-topic field from the setup and options dialogs.
