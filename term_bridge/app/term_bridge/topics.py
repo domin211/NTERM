@@ -84,8 +84,8 @@ class Topics:
             },
             "suggested_area": zone.controller_name,
             "origin": {
-                "name": "TERM Bridge",
-                "support_url": "https://github.com/domin211/TERM-bridge",
+                "name": "NTERM",
+                "support_url": "https://github.com/domin211/NTERM",
             },
         }
 
@@ -120,12 +120,12 @@ class Topics:
             "device": {
                 "identifiers": [f"term_bridge_{controller.key}"],
                 "name": f"{controller.name} Controller",
-                "manufacturer": "TERM Bridge",
+                "manufacturer": "NTERM",
                 "model": "HMPD Serial Controller",
             },
             "origin": {
-                "name": "TERM Bridge",
-                "support_url": "https://github.com/domin211/TERM-bridge",
+                "name": "NTERM",
+                "support_url": "https://github.com/domin211/NTERM",
             },
         }
 
