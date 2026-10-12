@@ -44,7 +44,6 @@ class TermBridgeSensorMapFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         options=rooms, mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
-                vol.Optional("base_topic", default="term_bridge"): str,
                 vol.Required("sensor"): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="sensor", device_class="temperature")
                 ),
@@ -66,7 +65,6 @@ class TermBridgeSensorMapOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({
-                vol.Optional("base_topic", default=self._entry.options.get("base_topic", self._entry.data.get("base_topic", "term_bridge"))): str,
                 vol.Required("sensor", default=self._entry.options.get("sensor", self._entry.data["sensor"])):
                     selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class="temperature"))
             }),
