@@ -2,24 +2,20 @@
 
 TERM Bridge works **without any external sensors**. Install the add-on, configure MQTT and the serial HMPD controllers, and start it. Discovered rooms appear as Home Assistant MQTT climate entities and continue to use their **HMPD temperatures and HMPD setpoints**. You do not need to install the extra integration or configure `external_sensors` for normal use.
 
-## Why are there two components?
+## One-add-on installation
 
-The TERM Bridge **add-on** talks to HMPD hardware. The optional **TERM Bridge Sensor Mapping** custom integration provides the Home Assistant room/sensor selection UI. Both are kept in the same [NTERM repository](https://github.com/domin211/NTERM), but Home Assistant add-ons cannot automatically install Core custom integrations. Installing/updating the add-on alone will **not** make Sensor Mapping appear in **Add integration**.
+**Only install the NTERM add-on.** Version 0.7 bundles and installs its companion **NTERM Sensor Mapping** Home Assistant custom integration automatically under `/config/custom_components/term_bridge_sensor_map/` (the add-on sees Home Assistant's main config at `/homeassistant`). A writable Home Assistant configuration mount is required for this feature.
 
-## Install the optional mapping UI
+1. Update/install the **NTERM** add-on (version **0.7**) and start it.
+2. Check the add-on log for `NTERM: sensor mapping integration installed/updated` or `already up to date`.
+3. **Restart Home Assistant Core once** after the first installation or any integration code update. Restarting only the add-on will not load the integration in Home Assistant.
+4. Go to **Settings → Devices & services → Add integration → NTERM Sensor Mapping**.
+5. Select an NTERM thermostat room and a Home Assistant temperature sensor. The MQTT base topic defaults to `term_bridge`; only change it if your bridge uses another prefix.
+6. Repeat **Add integration** for every other room that needs an external sensor. Existing mappings can be reconfigured through **Configure**.
 
-1. Ensure the TERM Bridge add-on is running and that its room climate entities are visible in **Settings → Devices & services → Entities**.
-2. In Home Assistant, open **File editor**, **Studio Code Server**, or the Samba share for the main Home Assistant configuration directory (usually `/config`). This is **not** the add-on's own `/config` folder.
-3. Download the folder [`custom_components/term_bridge_sensor_map`](https://github.com/domin211/NTERM/tree/feature/external-room-thermostat/custom_components/term_bridge_sensor_map) from this repository's PR branch, including `__init__.py`, `config_flow.py`, `manifest.json` and `strings.json`.
-4. Put that folder at **`/config/custom_components/term_bridge_sensor_map/`** (create `custom_components` if missing). Check that the files are directly inside the `term_bridge_sensor_map` folder, not in an extra nested directory.
-5. **Restart Home Assistant Core** (restarting only the TERM Bridge add-on is not sufficient).
-6. Go to **Settings → Devices & services → Add integration**, search for **TERM Bridge Sensor Mapping**, and select it.
-7. Choose the **room climate entity** and the **external temperature sensor**, then submit. The MQTT base topic defaults to `term_bridge`; only change it if your bridge uses a different base topic.
-8. Repeat **Add integration → TERM Bridge Sensor Mapping** for additional rooms. To change a sensor later, open the mapping entry's **Configure** options.
+If the integration does not appear, inspect the add-on logs for a copy or permission error, confirm `/config/custom_components/term_bridge_sensor_map/` exists in the **main Home Assistant config**, and restart Home Assistant Core. NTERM does **not** restart Home Assistant automatically. The integration is optional; failures do not stop ordinary HMPD thermostat control.
 
-There is no separate external sensor dropdown in the TERM Bridge add-on's configuration screen. The room/sensor dropdowns appear only after the custom integration has been installed and Home Assistant Core restarted.
-
-If the integration does not appear, check the folder path, restart Home Assistant Core again, and inspect **Settings → System → Logs** for `term_bridge_sensor_map`. If no rooms appear, wait for TERM Bridge MQTT climate discovery and verify the MQTT integration is enabled. The external sensor must be a Home Assistant sensor entity with the temperature device class.
+**Privacy and upgrade note:** Auto-installation requires write access to Home Assistant's full configuration directory. NTERM only writes the four companion integration files, leaves other files untouched, and refuses to overwrite a different integration's manifest. If you already manually installed `term_bridge_sensor_map`, bundled versions of its four files will be updated on the next add-on start. The integration's internal domain stays `term_bridge_sensor_map` to preserve existing config entries. Existing NTERM add-on IDs and MQTT topics are likewise unchanged to preserve installations.
 
 ## What happens with and without a mapping?
 
