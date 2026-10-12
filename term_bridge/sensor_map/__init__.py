@@ -49,17 +49,17 @@ def celsius(state) -> float | None:
 async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     mappings = mapping_for_entry(entry)
     token = object()
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = token
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {"token": token, "mappings": mappings}
 
     async def publish(zone: str, sensor: str) -> None:
-        if hass.data.get(DOMAIN, {}).get(entry.entry_id) is not token:
+        if hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("token") is not token:
             return
         reading = celsius(hass.states.get(sensor))
         if reading is None:
             _LOGGER.warning("NTERM external sensor %s for zone %s unavailable or invalid", sensor, zone)
             return
         # The bridge subscribes to this topic and republishes the climate state.
-        if hass.data.get(DOMAIN, {}).get(entry.entry_id) is token:
+        if hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("token") is token:
             await mqtt.async_publish(hass, f"{BASE_TOPIC}/external/{zone}", f"{reading:.2f}", qos=1, retain=False)
 
     async def publish_all() -> None:
@@ -91,8 +91,11 @@ async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
 
 
 async def async_update_listener(hass: HomeAssistant, entry) -> None:
-    # Preserve removed-zone knowledge across reload; the new entry publishes the rest.
-    old = mapping_for_entry(entry)
+    current = hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("mappings", {})
+    updated = mapping_for_entry(entry)
+    # An explicit Remove action must delete its retained mapping.
+    for zone in set(current) - set(updated):
+        await mqtt.async_publish(hass, f"{BASE_TOPIC}/external_map/{zone}", "", qos=1, retain=True)
     await hass.config_entries.async_reload(entry.entry_id)
 
 
