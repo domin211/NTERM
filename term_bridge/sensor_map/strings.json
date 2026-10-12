@@ -22,7 +22,8 @@
         "menu_options": {
           "add": "Add or change room sensor",
           "remove": "Remove room sensor"
-        }
+        },
+        "description": "Currently mapped rooms: {mappings}"
       },
       "add": {
         "title": "Add or change a room sensor",
