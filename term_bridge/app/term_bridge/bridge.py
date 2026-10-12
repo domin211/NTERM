@@ -539,6 +539,8 @@ class TERMBridge:
             client.subscribe(self.topics.set_target_subscription())
             for topic in self.external_by_topic:
                 client.subscribe(topic, qos=1)
+            client.subscribe(f"{self.options.base_topic}/external_map/+", qos=1)
+            client.subscribe(f"{self.options.base_topic}/external/+", qos=1)
             client.subscribe(self.topics.bridge_resync())
             self._publish_bridge_status(True)
             for controller in self.controllers:
@@ -563,6 +565,33 @@ class TERMBridge:
                 threading.Thread(target=self.force_full_republish, daemon=True).start()
                 return
 
+            map_prefix = f"{self.options.base_topic}/external_map/"
+            sensor_prefix = f"{self.options.base_topic}/external/"
+            if topic.startswith(map_prefix):
+                zone_key = topic[len(map_prefix):]
+                if "/" in zone_key or not zone_key:
+                    return
+                sensor_topic = f"{sensor_prefix}{zone_key}"
+                old_topic = self.external_by_zone.get(zone_key)
+                if old_topic and self.external_by_topic.get(old_topic) == zone_key:
+                    del self.external_by_topic[old_topic]
+                if payload:
+                    self.external_by_zone[zone_key] = sensor_topic
+                    self.external_by_topic[sensor_topic] = zone_key
+                else:
+                    self.external_by_zone.pop(zone_key, None)
+                zone = self.zones.get(zone_key)
+                if zone is not None:
+                    zone.external_topic = sensor_topic if payload else None
+                    zone.external_temp = None
+                    zone.external_received_at = None
+                    zone.pending_target = None
+                    if payload:
+                        zone.target_temp = self.virtual_targets.get(zone_key, THERMOSTAT_IDLE_TARGET)
+                    zone.discovered = False
+                    self._publish_discovery(zone)
+                    self._publish_state(zone)
+                return
             if topic in self.external_by_topic:
                 try:
                     value = float(payload)
