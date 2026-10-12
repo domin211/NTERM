@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1
+
+- Hardcoded the sensor-mapping MQTT prefix to `term_bridge` and removed the base-topic field from the setup and options dialogs.
+
 ## 0.7
 
 - Rebranded the Home Assistant add-on to NTERM without changing existing integration identifiers or MQTT topics.
