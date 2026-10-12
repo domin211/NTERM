@@ -50,8 +50,9 @@ async def request_clear(hass: HomeAssistant, zones: set[str]) -> None:
     if not zones:
         return
     state = hass.data[DOMAIN]
-    state["pending"].update(zones)
-    await _persist(hass)
+    async with state["lock"]:
+        state["pending"].update(zones)
+        await _persist(hass)
 
 
 async def reconcile(hass: HomeAssistant, *, exclude: str | None = None) -> None:
