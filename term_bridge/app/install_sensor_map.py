@@ -15,7 +15,7 @@ from pathlib import Path
 log = logging.getLogger("nterm.install")
 SOURCE = Path("/opt/nterm-sensor-map")
 DESTINATION = Path("/homeassistant/custom_components/term_bridge_sensor_map")
-FILES = ("__init__.py", "config_flow.py", "mapping.py", "manifest.json", "strings.json")
+FILES = ("__init__.py", "config_flow.py", "mapping.py", "manifest.json", "strings.json", "translations/en.json")
 
 
 def _digest(path: Path) -> str:
@@ -45,6 +45,7 @@ def install(source: Path = SOURCE, destination: Path = DESTINATION) -> bool:
         for filename in FILES:
             src = source / filename
             dst = destination / filename
+            dst.parent.mkdir(parents=True, exist_ok=True)
             if dst.exists() and _digest(dst) == _digest(src):
                 continue
             staged = destination / (filename + ".nterm-tmp")
