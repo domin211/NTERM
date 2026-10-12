@@ -44,6 +44,7 @@ class ControllerJob:
     zone_unique_id: str | None = None
     target: float | None = None
     reason: str = ""
+    external_generation: int | None = None
     done: threading.Event = field(default_factory=threading.Event)
     result_lines: list[str] = field(default_factory=list)
     error: BaseException | None = None
