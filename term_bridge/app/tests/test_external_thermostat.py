@@ -76,7 +76,7 @@ def test_normal_target_is_half_degree_logical_setpoint(tmp_path, monkeypatch):
     bridge, zone, jobs = make_bridge()
     zone.external_temp = 20.0
     zone.external_received_at = time.monotonic()
-    bridge._handle_set_target(zone.unique_id, "22.5")
+    bridge._handle_set_target(zone.unique_id, "22.6")
     assert zone.target_temp == 22.5
     assert jobs == [32.0]
     assert bridge.virtual_targets[zone.unique_id] == 22.5
