@@ -51,6 +51,14 @@ TEMP_MAX = 32.0
 TEMP_STEP = 1.0
 OFF_MODE_TARGET_THRESHOLD = 18.0
 
+# Global external thermostat constants (not configured per room).
+THERMOSTAT_HEAT_TARGET = 32.0
+THERMOSTAT_IDLE_TARGET = 16.0
+THERMOSTAT_HYSTERESIS = 0.3
+THERMOSTAT_MIN_DWELL_SECONDS = 600.0
+THERMOSTAT_SENSOR_TIMEOUT_SECONDS = 900.0
+THERMOSTAT_TARGETS_PATH = "/data/term_bridge_virtual_targets.json"
+
 RETAIN_DISCOVERY = True
 RETAIN_STATE = True
 
@@ -93,6 +101,12 @@ class Controller:
 
 
 @dataclass(frozen=True)
+class ExternalSensor:
+    zone: str
+    topic: str
+
+
+@dataclass(frozen=True)
 class Options:
     debug: bool = False
     mqtt_host: str = DEFAULT_MQTT_HOST
@@ -112,6 +126,7 @@ class Options:
     discovery_prefix: str = MQTT_DISCOVERY_PREFIX
     base_topic: str = MQTT_BASE_TOPIC
     temp_range: TempRange = field(default_factory=TempRange)
+    external_sensors: tuple[ExternalSensor, ...] = field(default_factory=tuple)
 
 
 def _expect_bool(raw: dict[str, Any], name: str, default: bool) -> bool:
@@ -182,6 +197,28 @@ def _build_controllers(raw: Any) -> tuple[Controller, ...]:
     return tuple(controllers)
 
 
+def _parse_external_sensors(raw: Any) -> tuple[ExternalSensor, ...]:
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        raise ConfigError("external_sensors must be a list")
+    sensors: list[ExternalSensor] = []
+    zones: set[str] = set()
+    topics: set[str] = set()
+    for item in raw:
+        if not isinstance(item, dict) or not isinstance(item.get("zone"), str) or not isinstance(item.get("topic"), str):
+            raise ConfigError("external_sensors items require zone and topic strings")
+        zone, topic = item["zone"].strip(), item["topic"].strip()
+        if not zone or not topic or any(c in topic for c in "+#") or topic.startswith("$"):
+            raise ConfigError("external sensor zone/topic must be nonempty and topic must not contain MQTT wildcards")
+        if zone in zones or topic in topics:
+            raise ConfigError("external sensor zone/topic must be unique")
+        zones.add(zone)
+        topics.add(topic)
+        sensors.append(ExternalSensor(zone, topic))
+    return tuple(sensors)
+
+
 def load_raw_options(path: str = OPTIONS_PATH) -> dict[str, Any]:
     try:
         with open(path, encoding="utf-8") as options_file:
@@ -222,6 +259,7 @@ def build_options(raw: dict[str, Any]) -> Options:
         mqtt_tls_key=tls_key,
         hmpd_path=_expect_string(raw, "hmpd_path", DEFAULT_HMPD_PATH, required=True),
         controllers=_build_controllers(raw.get("controllers")),
+        external_sensors=_parse_external_sensors(raw.get("external_sensors")),
     )
 
 
