@@ -18,7 +18,24 @@ def room_options(hass) -> list[dict[str, str]]:
         if entry.platform != "mqtt":
             continue
         zone = entry.unique_id[len("term_bridge_"):]
-        result.append({"value": zone, "label": entry.name or entry.original_name or entry.entity_id})
+        # MQTT climate entities often have no entity name because the device
+        # itself carries the room name. Resolve it before falling back to IDs.
+        state = hass.states.get(entry.entity_id)
+        device = None
+        if entry.device_id:
+            from homeassistant.helpers import device_registry as dr
+
+            device = dr.async_get(hass).async_get(entry.device_id)
+        label = (
+            entry.name
+            or (device.name_by_user if device else None)
+            or (device.name if device else None)
+            or (state.attributes.get("friendly_name") if state else None)
+            or entry.original_name
+        )
+        if not label or label.startswith("climate."):
+            label = entry.entity_id.removeprefix("climate.").replace("_", " ").title()
+        result.append({"value": zone, "label": label})
     return sorted(result, key=lambda x: x["label"])
 
 
