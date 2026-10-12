@@ -2,6 +2,14 @@
 
 TERM Bridge works **without any external sensors**. Install the add-on, configure MQTT and the serial HMPD controllers, and start it. Discovered rooms appear as Home Assistant MQTT climate entities and continue to use their **HMPD temperatures and HMPD setpoints**. You do not need to install the extra integration or configure `external_sensors` for normal use.
 
+## NTERM 0.8 Sensor Manager (proposed)
+
+Version 0.8 replaces the repetitive one-entry-per-room workflow with a manager. **Settings → Devices & services → NTERM Sensor Mapping → Add entry** creates a single **NTERM Sensor Manager**. Choose the first room and sensor. After that, click **Configure** on the manager, and choose **Add or change room sensor** or **Remove room sensor**. The manager shows the currently mapped rooms and sensors; you can repeat Add as often as needed.
+
+Existing individual entries (for example, Pokoj 6) remain supported to avoid abruptly disabling heating control. They are *not* automatically deleted. During migration, remove an old entry only after recreating its room mapping in the manager, and verify the new sensor temperature arrives. Do not leave two entries publishing the same room. A permanent removal clears the retained MQTT mapping, so reconfigure/reload the manager afterward to re-publish its mapping for that room. The main Home Assistant thermostat should show the chosen sensor value as its current temperature, while rooms without mappings continue using HMPD.
+
+**Verify the actual temperature path:** after configuring a room, check NTERM's add-on logs for `External sensor mapping enabled` or `mapping confirmed` and `External temperature received for <zone>: ... C`. The latter confirms the bridge received a value, not just that Home Assistant saved a mapping. Check `term_bridge/<zone>/state` in MQTT for `current_temp`; it must equal the external sensor's value. If the log lacks the reading, investigate the sensor entity and HA MQTT integration before trusting heating control. Always test one room before deploying more.
+
 ## One-add-on installation
 
 **Only install the NTERM add-on.** Version 0.7 bundles and installs its companion **NTERM Sensor Mapping** Home Assistant custom integration automatically under `/config/custom_components/term_bridge_sensor_map/` (the add-on sees Home Assistant's main config at `/homeassistant`). A writable Home Assistant configuration mount is required for this feature.
