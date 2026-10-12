@@ -32,7 +32,7 @@ async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
                 return
         except (TypeError, ValueError):
             return
-        await mqtt.async_publish(hass, value_topic, f"{val:.2f}", qos=1, retain=False)
+        mqtt.async_publish(hass, value_topic, f"{val:.2f}", qos=1, retain=False)
 
     @callback
     def on_change(event) -> None:
@@ -42,7 +42,7 @@ async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     def on_interval(now) -> None:
         hass.async_create_task(publish_value())
 
-    await mqtt.async_publish(hass, mapping_topic, sensor, qos=1, retain=True)
+    mqtt.async_publish(hass, mapping_topic, sensor, qos=1, retain=True)
     remove_state = async_track_state_change_event(hass, [sensor], on_change)
     remove_interval = async_track_time_interval(hass, on_interval, timedelta(minutes=2))
     entry.async_on_unload(remove_state)
@@ -58,5 +58,5 @@ async def async_update_listener(hass: HomeAssistant, entry) -> None:
 
 async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
     entry.async_unload_callbacks()
-    await mqtt.async_publish(hass, f"term_bridge/external_map/{entry.data['zone']}", "", qos=1, retain=True)
+    mqtt.async_publish(hass, f"term_bridge/external_map/{entry.data['zone']}", "", qos=1, retain=True)
     return True
