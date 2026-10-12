@@ -159,7 +159,13 @@ class TERMBridge:
             and zone.external_received_at is not None
             and now - zone.external_received_at <= THERMOSTAT_SENSOR_TIMEOUT_SECONDS
         )
-        # A lost sensor requests idle immediately, bypassing the minimum hold.
+        # Allow a full sensor timeout after mapping activation for the first reading.
+        if not fresh and not zone.external_first_reading and (
+            zone.external_mapped_at is None
+            or now - zone.external_mapped_at < THERMOSTAT_SENSOR_TIMEOUT_SECONDS
+        ):
+            return
+        zone.external_fallback = not fresh
         if not fresh:
             wants_heat = False
         elif zone.heat_requested:
@@ -168,7 +174,13 @@ class TERMBridge:
             wants_heat = zone.external_temp <= zone.target_temp - THERMOSTAT_HYSTERESIS
 
         desired = THERMOSTAT_HEAT_TARGET if wants_heat else THERMOSTAT_IDLE_TARGET
-        if zone.pending_target is not None or zone.controller_target_temp == desired:
+        if zone.pending_target == desired:
+            return
+        if zone.pending_target is not None and zone.pending_target != desired:
+            # Supersede queued/retrying jobs without waiting for their completion.
+            zone.external_generation += 1
+            zone.pending_target = None
+        if zone.controller_target_temp == desired:
             return
         if (
             fresh and zone.last_switch_at is not None
@@ -230,9 +242,10 @@ class TERMBridge:
         def complete(job: ControllerJob, error: BaseException | None) -> None:
             if job.kind == "set" and error is not None:
                 zone = self.zones.get(job.zone_unique_id or "")
-                if zone is not None and zone.external_topic:
+                if (zone is not None and job.reason == "external_thermostat"
+                    and job.external_generation == zone.external_generation):
                     zone.pending_target = None
-                log.error("External thermostat set failed for %s: %s", job.zone_unique_id, error)
+                log.error("Set failed for %s: %s", job.zone_unique_id, error)
                 return
             if job.kind not in ("temps", "regs"):
                 return
@@ -263,6 +276,16 @@ class TERMBridge:
             raise RuntimeError(f"Zone not found for queued set: {job.zone_unique_id}")
 
         target = self.temp_range.snap(float(job.target if job.target is not None else self.temp_range.minimum))
+        if job.reason == "external_thermostat":
+            if (not zone.external_topic or job.external_generation != zone.external_generation
+                or zone.pending_target != target):
+                log.debug("Skipping superseded external thermostat command for %s", zone.unique_id)
+                return
+            # Recalculate immediately before sending, including stale-sensor fallback.
+            self._tick_external(zone)
+            if (not zone.external_topic or job.external_generation != zone.external_generation
+                or zone.pending_target != target):
+                return
         cmd = hmpd_cli.build_hmpd_cmd(self._ensure_hmpd(), controller, ["set", str(zone.zone_index), f"{target:.1f}"])
         hmpd_cli.run_hmpd(cmd, job.timeout)
 
@@ -270,7 +293,8 @@ class TERMBridge:
         if zone.external_topic:
             previous = zone.heat_requested
             zone.heat_requested = target == THERMOSTAT_HEAT_TARGET
-            zone.pending_target = None
+            if job.reason != "external_thermostat" or job.external_generation == zone.external_generation:
+                zone.pending_target = None
             if previous != zone.heat_requested:
                 zone.last_switch_at = time.monotonic()
         if zone.target_temp is None:
@@ -340,6 +364,7 @@ class TERMBridge:
                     heat_requested=(
                         unique_id in self.external_by_zone and data["target_temp"] == THERMOSTAT_HEAT_TARGET
                     ),
+                    external_mapped_at=(time.monotonic() if unique_id in self.external_by_zone else None),
                     enabled=data["enabled"],
                 )
                 self.zones[unique_id] = zone
@@ -349,14 +374,26 @@ class TERMBridge:
                 zone.current_temp = current_temp
                 if data["target_temp"] is not None:
                     zone.controller_target_temp = data["target_temp"]
-                    if zone.target_temp is None:
+                    if not zone.external_topic or zone.target_temp is None:
                         zone.target_temp = data["target_temp"]
                 zone.enabled = data["enabled"]
-                zone.external_topic = self.external_by_zone.get(unique_id)
+                mapping = self.external_by_zone.get(unique_id)
+                if zone.external_topic != mapping:
+                    zone.external_generation += 1
+                    zone.pending_target = None
+                    zone.external_mapped_at = time.monotonic() if mapping else None
+                    zone.external_first_reading = False
+                    zone.external_temp = None
+                    zone.external_received_at = None
+                    zone.heat_requested = data["target_temp"] == THERMOSTAT_HEAT_TARGET
+                    zone.target_temp = (self.virtual_targets.get(unique_id, THERMOSTAT_IDLE_TARGET)
+                                        if mapping else data["target_temp"])
+                zone.external_topic = mapping
                 updated += 1
 
             if zone.external_topic and zone.external_topic in self.sensor_readings:
                 zone.external_temp, zone.external_received_at = self.sensor_readings[zone.external_topic]
+                zone.external_first_reading = True
 
             if zone.target_temp is None and zone.controller_target_temp is not None:
                 zone.target_temp = zone.controller_target_temp
@@ -589,9 +626,15 @@ class TERMBridge:
                     zone.external_topic = sensor_topic if payload else None
                     zone.external_temp = None
                     zone.external_received_at = None
+                    zone.external_generation += 1
                     zone.pending_target = None
+                    zone.external_mapped_at = time.monotonic() if payload else None
+                    zone.external_first_reading = False
+                    zone.heat_requested = zone.controller_target_temp == THERMOSTAT_HEAT_TARGET
                     if payload:
                         zone.target_temp = self.virtual_targets.get(zone_key, THERMOSTAT_IDLE_TARGET)
+                    else:
+                        zone.target_temp = zone.controller_target_temp
                     zone.discovered = False
                     self._publish_discovery(zone)
                     self._publish_state(zone)
@@ -610,6 +653,7 @@ class TERMBridge:
                 if zone is not None:
                     zone.external_temp = value
                     zone.external_received_at = now
+                    zone.external_first_reading = True
                     self._publish_state(zone)
                     self._tick_external(zone)
                 return
@@ -656,7 +700,8 @@ class TERMBridge:
             log.error("Unknown controller for zone %s", zone.unique_id)
             return
         job = ControllerJob(
-            kind="set", timeout=SET_TIMEOUT, zone_unique_id=zone.unique_id, target=target, reason=reason
+            kind="set", timeout=SET_TIMEOUT, zone_unique_id=zone.unique_id, target=target, reason=reason,
+            external_generation=zone.external_generation if reason == "external_thermostat" else None
         )
         queue.enqueue(job, wait=False)
         log.info("Queued set for %s (%s) to %.1f", zone.zone_name, zone.unique_id, target)
