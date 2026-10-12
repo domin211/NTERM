@@ -16,6 +16,12 @@ class Zone:
     current_temp: float | None = None
     controller_target_temp: float | None = None
     target_temp: float | None = None
+    external_topic: str | None = None
+    external_temp: float | None = None
+    external_received_at: float | None = None
+    heat_requested: bool = False
+    last_switch_at: float | None = None
+    pending_target: float | None = None
     enabled: bool | None = None
     discovered: bool = False
     last_discovery_payload: str | None = None
