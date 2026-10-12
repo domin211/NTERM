@@ -69,10 +69,12 @@ class Topics:
             "temperature_command_topic": self.command(zone.unique_id),
             "mode_state_topic": state_topic,
             "mode_state_template": "{{ value_json.mode }}",
+            "action_topic": state_topic,
+            "action_template": "{{ value_json.action }}",
             "modes": ["off", "heat"],
             "min_temp": temp_range.minimum,
             "max_temp": temp_range.maximum,
-            "temp_step": temp_range.step,
+            "temp_step": 0.5 if zone.external_topic else temp_range.step,
             "device": {
                 "identifiers": [f"term_bridge_{zone.unique_id}"],
                 "name": zone.zone_name,
@@ -88,12 +90,16 @@ class Topics:
         }
 
     def state_payload(self, zone: Zone, temp_range: TempRange, mode: str) -> dict[str, Any]:
-        current_temp = zone.current_temp if zone.current_temp is not None else temp_range.minimum
+        current_temp = zone.external_temp if zone.external_topic else zone.current_temp
         target_temp = zone.target_temp if zone.target_temp is not None else temp_range.minimum
         return {
             "current_temp": current_temp,
             "target_temp": target_temp,
             "mode": mode,
+            "action": (
+                ("heating" if zone.heat_requested else "idle")
+                if zone.external_topic else ("off" if mode == "off" else "heating")
+            ),
         }
 
     def controller_status_payload(self, controller: Controller) -> dict[str, Any]:

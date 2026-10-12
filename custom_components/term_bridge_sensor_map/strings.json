@@ -1,0 +1,28 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Assign temperature sensor to TERM Bridge room",
+        "description": "Select the NTERM room thermostat and its external temperature sensor.",
+        "data": {
+          "zone": "NTERM room",
+          "sensor": "External temperature sensor"
+        }
+      }
+    },
+    "error": {
+      "invalid_sensor": "Choose a temperature sensor.",
+      "no_rooms": "No NTERM thermostat entities found."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Change room sensor",
+        "data": {
+          "sensor": "External temperature sensor"
+        }
+      }
+    }
+  }
+}

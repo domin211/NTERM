@@ -16,6 +16,17 @@ class Zone:
     current_temp: float | None = None
     controller_target_temp: float | None = None
     target_temp: float | None = None
+    external_topic: str | None = None
+    external_temp: float | None = None
+    external_received_at: float | None = None
+    heat_requested: bool = False
+    last_switch_at: float | None = None
+    pending_target: float | None = None
+    external_generation: int = 0
+    external_mapped_at: float | None = None
+    external_first_reading: bool = False
+    external_fallback: bool = False
+
     enabled: bool | None = None
     discovered: bool = False
     last_discovery_payload: str | None = None
@@ -33,6 +44,7 @@ class ControllerJob:
     zone_unique_id: str | None = None
     target: float | None = None
     reason: str = ""
+    external_generation: int | None = None
     done: threading.Event = field(default_factory=threading.Event)
     result_lines: list[str] = field(default_factory=list)
     error: BaseException | None = None
