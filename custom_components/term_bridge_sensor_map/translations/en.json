@@ -1,0 +1,54 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Create NTERM Sensor Manager",
+        "description": "Select the first room and its temperature sensor. Add more rooms later through Configure.",
+        "data": {
+          "zone": "Room",
+          "sensor": "External temperature sensor"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "NTERM Sensor Manager already configured",
+      "no_rooms": "No NTERM thermostats discovered"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Manage external temperature sensors",
+        "menu_options": {
+          "add": "Add or change room sensor",
+          "remove": "Remove room sensor"
+        },
+        "description": "Currently mapped rooms: {mappings}"
+      },
+      "add": {
+        "title": "Add or change a room sensor",
+        "data": {
+          "zone": "Room",
+          "sensor": "External temperature sensor"
+        }
+      },
+      "remove": {
+        "title": "Remove an external sensor mapping",
+        "data": {
+          "zone": "Room"
+        }
+      },
+      "legacy": {
+        "title": "Change existing room sensor",
+        "data": {
+          "sensor": "External temperature sensor"
+        }
+      }
+    },
+    "abort": {
+      "no_mappings": "No external sensor mappings to remove",
+      "no_rooms": "No NTERM thermostats discovered"
+    }
+  },
+  "title": "NTERM Sensor Mapping"
+}
