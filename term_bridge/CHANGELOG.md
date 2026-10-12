@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.3
+
+- Replaced blank sensor-manager action menu with a dropdown using explicit embedded option labels; works even if menu translations are not displayed.
+
 ## 0.8.2
 
 - Fixed blank sensor-manager menu by including the Home Assistant custom integration English translations and explicit menu labels.
