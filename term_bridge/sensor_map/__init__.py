@@ -54,7 +54,7 @@ async def request_clear(hass: HomeAssistant, zones: set[str]) -> None:
     await _persist(hass)
 
 
-async def reconcile(hass: HomeAssistant) -> None:
+async def reconcile(hass: HomeAssistant, *, exclude: str | None = None) -> None:
     """Republish all authoritative mappings and retry pending clears.
 
     Periodic reconciliation also repairs MQTT reconnects and incomplete startup
@@ -62,7 +62,7 @@ async def reconcile(hass: HomeAssistant) -> None:
     """
     state = hass.data[DOMAIN]
     async with state["lock"]:
-        current = active_owners(hass)
+        current = active_owners(hass, exclude=exclude)
         for zone, (_, sensor) in current.items():
             try:
                 await mqtt.async_publish(hass, f"{BASE_TOPIC}/external_map/{zone}", sensor, qos=1, retain=True)
@@ -104,6 +104,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
+    if DOMAIN not in hass.data or "store" not in hass.data[DOMAIN]:
+        await async_setup(hass, {})
     mappings = mapping_for_entry(entry)
     token = object()
     hass.data[DOMAIN]["entries"][entry.entry_id] = {"token": token, "mappings": mappings}
@@ -165,4 +167,13 @@ async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
 async def async_remove_entry(hass: HomeAssistant, entry) -> None:
     # Delete is distinct from reload: only a permanent deletion tombstones zones.
     await request_clear(hass, set(mapping_for_entry(entry)))
-    await reconcile(hass)
+    await reconcile(hass, exclude=entry.entry_id)
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry) -> bool:
+    """Migrate version-1 individual room entries without changing their mapping."""
+    if entry.version == 1:
+        _LOGGER.info("Migrating NTERM room mapping %s to v2", entry.entry_id)
+        hass.config_entries.async_update_entry(entry, version=2)
+        return True
+    return entry.version == 2
