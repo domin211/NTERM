@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.4
+
+- Existing single-room Sensor Mapping entries now expose the same Add/Change/Remove controls as the multi-room manager, without losing their original sensor.
+- Convert legacy entry options to multi-room mappings when adding the second room; preserve one authoritative publisher per room.
+
 ## 0.8.3
 
 - Replaced blank sensor-manager action menu with a dropdown using explicit embedded option labels; works even if menu translations are not displayed.
