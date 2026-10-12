@@ -18,7 +18,7 @@ state synchronized, and sends target-temperature changes back to each controller
 - Strict startup configuration validation
 - Rotating debug logs
 
-## External-sensor thermostat (optional)
+**Looking for the external sensor dropdown?** It is supplied by an optional Home Assistant custom integration, not by the add-on itself. The add-on works normally without it. See the [step-by-step add-on documentation](term_bridge/DOCS.md) for installation, setup, and troubleshooting.\n\n## External-sensor thermostat (optional)
 
 The bridge can expose a room as a conventional thermostat using a separate Home Assistant temperature sensor. The displayed climate temperature and target are independent of the HMPD's internal setpoint. The HMPD is commanded to **32 °C when heat is requested** and **16 °C when idle**.
 
