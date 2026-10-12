@@ -18,6 +18,33 @@ state synchronized, and sends target-temperature changes back to each controller
 - Strict startup configuration validation
 - Rotating debug logs
 
+## External-sensor thermostat (optional)
+
+The bridge can expose a room as a conventional thermostat using a separate Home Assistant temperature sensor. The displayed climate temperature and target are independent of the HMPD's internal setpoint. The HMPD is commanded to **32 °C when heat is requested** and **16 °C when idle**.
+
+Global, intentionally hard-coded settings:
+
+- Heating target: 32 °C; idle target: 16 °C.
+- Hysteresis: ±0.3 °C around the user-selected virtual target.
+- Minimum time between heating-state changes: **10 minutes**. The initial decision has no delay.
+- If the external temperature stops arriving for 15 minutes, request idle (16 °C) immediately, bypassing the switching hold.
+
+Only the external sensor topic needs to be assigned to each selected zone. Example add-on options:
+
+```yaml
+external_sensors:
+  - zone: usb0_ttyusb0_0
+    topic: hotel/room101/temperature
+  - zone: usb0_ttyusb0_1
+    topic: hotel/room102/temperature
+```
+
+The `zone` is the MQTT zone key (for example, `term_bridge/usb0_ttyusb0_0/state` has key `usb0_ttyusb0_0`). The temperature topics must publish **plain numeric Celsius values** (e.g. `21.6`) at least every few minutes. Use a Home Assistant MQTT publish automation to forward changes and periodically republish the readings, including after Home Assistant restarts. Do not retain these readings: retained sensor values may be stale even though they just arrived at the bridge.
+
+This feature does not require per-zone hysteresis or high/low setpoints. The guest-facing climate target has 0.5 °C precision and is persisted by TERM Bridge to `/data/term_bridge_virtual_targets.json`.
+
+**Important limitations:** 16 °C is a low *setpoint*, not a guaranteed valve-close command; the HMPD might still heat if its internal measured temperature falls below 16 °C. Similarly, 32 °C is not guaranteed to request heat if its own internal reading exceeds 32 °C. The 10-minute hold can allow some overshoot, and an offline HMPD cannot receive the fallback command. Test one room on physical hardware before wider deployment. The default bridge behavior remains unchanged for zones without an external sensor mapping.
+
 ## Installation
 
 1. Add `https://github.com/domin211/term-bridge` as a Home Assistant add-on repository.
