@@ -56,6 +56,7 @@ def install(source: Path = SOURCE, destination: Path = DESTINATION) -> bool:
                 staged.unlink(missing_ok=True)
             changed = True
         if changed:
+            print("NTERM: installed sensor-mapping UI build 0.8.5 (action selector)", flush=True)
             print(
                 "NTERM: sensor mapping integration installed/updated. "
                 "Restart Home Assistant Core to load the new files; "
@@ -63,7 +64,7 @@ def install(source: Path = SOURCE, destination: Path = DESTINATION) -> bool:
                 flush=True,
             )
         else:
-            print("NTERM: sensor mapping integration is already up to date", flush=True)
+            print("NTERM: sensor mapping integration 0.8.5 already up to date", flush=True)
         return True
     except (OSError, ValueError, TypeError) as exc:
         print(f"NTERM: could not install sensor mapping: {exc}", flush=True)
