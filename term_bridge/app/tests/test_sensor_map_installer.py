@@ -37,6 +37,8 @@ def test_upgrade_preserves_unrelated_files(tmp_path):
     source = tmp_path / "source"
     destination = tmp_path / "destination"
     source.mkdir()
+    (source / "translations").mkdir()
+    (source / "translations" / "en.json").write_text("{}")
     destination.mkdir()
     for name in ("__init__.py", "config_flow.py", "mapping.py", "strings.json"):
         (source / name).write_text("new")
