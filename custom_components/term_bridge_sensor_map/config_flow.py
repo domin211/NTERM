@@ -65,7 +65,10 @@ class NtermSensorMapOptionsFlow(config_entries.OptionsFlow):
         labels = {room["value"]: room["label"] for room in room_options(self.hass)}
         mapped = ", ".join(f"{labels.get(z, z)} → {sensor}" for z, sensor in self._mappings().items())
         return self.async_show_menu(
-            step_id="init", menu_options=["add", "remove"],
+            step_id="init", menu_options={
+                "add": "Add or change room sensor",
+                "remove": "Remove room sensor",
+            },
             description_placeholders={"mappings": mapped or "None"},
         )
 
