@@ -8,6 +8,8 @@ def test_installs_and_is_idempotent(tmp_path):
     source = tmp_path / "bundled"
     destination = tmp_path / "ha" / "custom_components" / "term_bridge_sensor_map"
     source.mkdir()
+    (source / "translations").mkdir()
+    (source / "translations" / "en.json").write_text("{}")
     for name in ("__init__.py", "config_flow.py", "mapping.py", "strings.json"):
         (source / name).write_text(name)
     (source / "manifest.json").write_text(json.dumps({"domain": "term_bridge_sensor_map"}))
@@ -67,4 +69,5 @@ def test_real_bundle_contains_mapping_dependency(tmp_path):
     destination = tmp_path / "custom_components" / "term_bridge_sensor_map"
     assert install(source, destination)
     assert (destination / "mapping.py").is_file()
+    assert (destination / "translations" / "en.json").is_file()
     assert "from .mapping import" in (destination / "__init__.py").read_text()
