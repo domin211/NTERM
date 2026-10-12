@@ -104,3 +104,10 @@ async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
     entry.async_unload_callbacks()
     # No empty retained mapping on routine reload: a restart must not disable safety fallback.
     return True
+
+
+async def async_remove_entry(hass: HomeAssistant, entry) -> None:
+    """Clear MQTT mapping only when an entry is permanently deleted."""
+    for zone in mapping_for_entry(entry):
+        await mqtt.async_publish(hass, f"{BASE_TOPIC}/external_map/{zone}", "", qos=1, retain=True)
+    _LOGGER.info("NTERM removed %d retained mappings", len(mapping_for_entry(entry)))
