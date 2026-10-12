@@ -613,6 +613,7 @@ class TERMBridge:
                 # A retained mapping is replayed on reconnect; do not reset the
                 # thermostat or discard a pending command for the same mapping.
                 if old_topic == sensor_topic and payload:
+                    log.info("External sensor mapping confirmed for %s (%s)", zone_key, payload)
                     return
                 if old_topic and self.external_by_topic.get(old_topic) == zone_key:
                     del self.external_by_topic[old_topic]
@@ -621,6 +622,7 @@ class TERMBridge:
                     self.external_by_topic[sensor_topic] = zone_key
                 else:
                     self.external_by_zone.pop(zone_key, None)
+                log.info("External sensor mapping %s for %s: %s", "enabled" if payload else "removed", zone_key, payload)
                 zone = self.zones.get(zone_key)
                 if zone is not None:
                     zone.external_topic = sensor_topic if payload else None
@@ -654,6 +656,7 @@ class TERMBridge:
                     zone.external_temp = value
                     zone.external_received_at = now
                     zone.external_first_reading = True
+                    log.info("External temperature received for %s: %.2f C", zone.unique_id, value)
                     self._publish_state(zone)
                     self._tick_external(zone)
                 return
