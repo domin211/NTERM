@@ -15,7 +15,7 @@ from pathlib import Path
 log = logging.getLogger("nterm.install")
 SOURCE = Path("/opt/nterm-sensor-map")
 DESTINATION = Path("/homeassistant/custom_components/term_bridge_sensor_map")
-FILES = ("__init__.py", "config_flow.py", "manifest.json", "strings.json")
+FILES = ("__init__.py", "config_flow.py", "mapping.py", "manifest.json", "strings.json")
 
 
 def _digest(path: Path) -> str:
@@ -29,6 +29,11 @@ def install(source: Path = SOURCE, destination: Path = DESTINATION) -> bool:
         return False
 
     try:
+        # Validate the complete bundle before changing any installed module.
+        missing = [filename for filename in FILES if not (source / filename).is_file()]
+        if missing:
+            print(f"NTERM: incomplete sensor mapping bundle (missing {missing}); refusing partial install", flush=True)
+            return False
         manifest = destination / "manifest.json"
         if manifest.exists():
             installed = json.loads(manifest.read_text(encoding="utf-8"))
