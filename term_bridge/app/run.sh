@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-echo "Starting TERM Bridge runner"
+echo "Starting NTERM runner"
+python3 /app/install_sensor_map.py || echo "WARNING: NTERM sensor mapping install failed; bridge will continue with normal HMPD control"
 
 while true; do
     echo "Launching /app/main.py"

@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Assign temperature sensor to TERM Bridge room",
+        "title": "Assign temperature sensor to NTERM room",
         "description": "Select the NTERM room thermostat and its external temperature sensor.",
         "data": {
           "zone": "NTERM room",

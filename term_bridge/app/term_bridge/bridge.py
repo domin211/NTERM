@@ -824,7 +824,7 @@ class TERMBridge:
     def start(self) -> None:
         try:
             self.hmpd_path = hmpd_cli.wait_for_hmpd(self.options.hmpd_path, HMPD_FIND_RETRY_SECONDS)
-            log.info("=== TERM Bridge starting ===")
+            log.info("=== NTERM starting ===")
             for controller in self.controllers:
                 log.info(
                     "Configured controller %s -> %s @ %s (key=%s, expected_regs=%s)",

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7
+
+- Rebranded the Home Assistant add-on to NTERM without changing existing integration identifiers or MQTT topics.
+- Bundled and auto-installed the optional NTERM Sensor Mapping custom integration; a Home Assistant Core restart is required to load new integration code.
+- Kept unmapped rooms on normal HMPD temperature/setpoint operation.
+- Added safe installer regression tests.
+
+
 ## 5.1.4
 
 - Fixed duplicated Home Assistant names by making each climate entity the main
