@@ -1,6 +1,6 @@
-# TERM Bridge
+# NTERM
 
-TERM Bridge connects serial HMPD thermostat controllers to Home Assistant. It
+NTERM connects serial HMPD thermostat controllers to Home Assistant. It
 discovers enabled zones, publishes them as MQTT climate entities, keeps their
 state synchronized, and sends target-temperature changes back to each controller.
 
@@ -29,14 +29,11 @@ Global, intentionally hard-coded settings:
 - Minimum time between heating-state changes: **10 minutes**. The initial decision has no delay.
 - If the external temperature stops arriving for 15 minutes, request idle (16 °C) immediately, bypassing the switching hold.
 
-### Assign sensors through the Home Assistant UI (recommended)
+### Add external sensors through the Home Assistant UI (optional)
 
-1. Copy the repository's `custom_components/term_bridge_sensor_map` directory into Home Assistant `/config/custom_components/term_bridge_sensor_map`.
-2. Restart Home Assistant. In **Settings → Devices & services → Add integration**, find **TERM Bridge Sensor Mapping**.
-3. Select an **NTERM room thermostat** and its external **temperature sensor** from the dropdowns. Add another integration entry for each room.
-4. To change a room's sensor, open that entry's **Configure** options.
+**NTERM 0.7 automatically installs the companion NTERM Sensor Mapping integration.** After updating and starting the add-on, **restart Home Assistant Core once**, then go to **Settings → Devices & services → Add integration → NTERM Sensor Mapping**. Choose a room and its external sensor. Add another mapping entry for each additional room. The installer logs whether files were copied and does not interrupt normal HMPD operation if it cannot write to the Home Assistant configuration. See [NTERM add-on documentation](term_bridge/DOCS.md).
 
-The mapping integration forwards temperature readings every 2 minutes and on state changes. It publishes the mapping through a retained MQTT configuration topic, so you do not need to modify the TERM Bridge add-on options or manually maintain sensor MQTT topics. Existing MQTT thermostats must be discovered before the room dropdown can display them.
+Rooms without mappings use original HMPD temperature and control behavior. Installing the companion integration does not require you to use it.
 
 The add-on's `external_sensors` list remains available for legacy/manual mappings, but it is **not necessary when you use the UI integration**.
 
