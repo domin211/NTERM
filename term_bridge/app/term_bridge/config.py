@@ -206,7 +206,11 @@ def _parse_external_sensors(raw: Any) -> tuple[ExternalSensor, ...]:
     zones: set[str] = set()
     topics: set[str] = set()
     for item in raw:
-        if not isinstance(item, dict) or not isinstance(item.get("zone"), str) or not isinstance(item.get("topic"), str):
+        if (
+            not isinstance(item, dict)
+            or not isinstance(item.get("zone"), str)
+            or not isinstance(item.get("topic"), str)
+        ):
             raise ConfigError("external_sensors items require zone and topic strings")
         zone, topic = item["zone"].strip(), item["topic"].strip()
         if not zone or not topic or any(c in topic for c in "+#") or topic.startswith("$"):
