@@ -337,6 +337,7 @@ class TERMBridge:
                         if unique_id in self.external_by_zone else data["target_temp"]
                     ),
                     external_topic=self.external_by_zone.get(unique_id),
+                    heat_requested=(unique_id in self.external_by_zone and data["target_temp"] == THERMOSTAT_HEAT_TARGET),
                     enabled=data["enabled"],
                 )
                 self.zones[unique_id] = zone
