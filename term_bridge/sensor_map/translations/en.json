@@ -18,12 +18,10 @@
   "options": {
     "step": {
       "init": {
-        "title": "Manage external temperature sensors",
-        "menu_options": {
-          "add": "Add or change room sensor",
-          "remove": "Remove room sensor"
-        },
-        "description": "Currently mapped rooms: {mappings}"
+        "title": "NTERM Sensor Manager — 0.8.5",
+        "data": {
+          "action": "Choose action"
+        }
       },
       "add": {
         "title": "Add or change a room sensor",
