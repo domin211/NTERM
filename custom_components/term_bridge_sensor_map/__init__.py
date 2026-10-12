@@ -17,22 +17,31 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     zone = entry.data["zone"]
     sensor = entry.options.get("sensor", entry.data["sensor"])
-    mapping_topic = f"term_bridge/external_map/{zone}"
-    value_topic = f"term_bridge/external/{zone}"
+    base_topic = entry.options.get("base_topic", entry.data.get("base_topic", "term_bridge")).rstrip("/")
+    mapping_topic = f"{base_topic}/external_map/{zone}"
+    value_topic = f"{base_topic}/external/{zone}"
+    active = object()
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = active
 
     async def publish_value() -> None:
+        if hass.data.get(DOMAIN, {}).get(entry.entry_id) is not active:
+            return
         state = hass.states.get(sensor)
         if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
         try:
             val = float(state.state)
-            if state.attributes.get("unit_of_measurement") == UnitOfTemperature.FAHRENHEIT:
+            unit = state.attributes.get("unit_of_measurement")
+            if unit == UnitOfTemperature.FAHRENHEIT:
                 val = (val - 32) * 5 / 9
+            elif unit == UnitOfTemperature.KELVIN:
+                val -= 273.15
             if not math.isfinite(val) or not 0 <= val <= 50:
                 return
         except (TypeError, ValueError):
             return
-        await mqtt.async_publish(hass, value_topic, f"{val:.2f}", qos=1, retain=False)
+        if hass.data.get(DOMAIN, {}).get(entry.entry_id) is active:
+            await mqtt.async_publish(hass, value_topic, f"{val:.2f}", qos=1, retain=False)
 
     @callback
     def on_change(event) -> None:
@@ -42,7 +51,8 @@ async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     def on_interval(now) -> None:
         hass.async_create_task(publish_value())
 
-    await mqtt.async_publish(hass, mapping_topic, sensor, qos=1, retain=True)
+    if hass.data.get(DOMAIN, {}).get(entry.entry_id) is active:
+        await mqtt.async_publish(hass, mapping_topic, sensor, qos=1, retain=True)
     remove_state = async_track_state_change_event(hass, [sensor], on_change)
     remove_interval = async_track_time_interval(hass, on_interval, timedelta(minutes=2))
     entry.async_on_unload(remove_state)
@@ -57,6 +67,7 @@ async def async_update_listener(hass: HomeAssistant, entry) -> None:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry) -> bool:
+    hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
     entry.async_unload_callbacks()
-    await mqtt.async_publish(hass, f"term_bridge/external_map/{entry.data['zone']}", "", qos=1, retain=True)
+    # Retained mapping survives a reload or temporary integration outage.
     return True
