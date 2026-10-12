@@ -59,3 +59,13 @@ def test_incomplete_bundle_refuses_partial_upgrade(tmp_path):
     assert not install(source, destination)
     assert (destination / "__init__.py").read_text() == "old"
     assert not (destination / "mapping.py").exists()
+
+
+def test_repository_bundle_contains_imported_mapping_module(tmp_path):
+    from pathlib import Path
+
+    source = Path(__file__).resolve().parents[2] / "sensor_map"
+    destination = tmp_path / "custom_components" / "term_bridge_sensor_map"
+    assert install(source, destination)
+    assert (destination / "mapping.py").is_file()
+    assert "from .mapping import" in (destination / "__init__.py").read_text()
