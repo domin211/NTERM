@@ -1,7 +1,7 @@
 {
   "domain": "term_bridge_sensor_map",
   "name": "NTERM Sensor Mapping",
-  "version": "0.8.0",
+  "version": "0.8.5",
   "documentation": "https://github.com/domin211/NTERM",
   "dependencies": [
     "mqtt"
