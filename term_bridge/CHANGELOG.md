@@ -2,6 +2,8 @@
 
 ## 0.8.0 (proposed)
 
+- Removed redundant `external_sensors` add-on settings field; use NTERM Sensor Manager for all new mappings, retaining legacy parsing for existing saved options.
+
 - Introduced one NTERM Sensor Manager for multiple rooms with Add/Change/Remove controls.
 - Migrates existing version-1 room entries to version 2 without discarding sensor mappings.
 - Elects exactly one temperature publisher per room across manager and legacy entries.
