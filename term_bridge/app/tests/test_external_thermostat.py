@@ -81,3 +81,66 @@ def test_normal_target_is_half_degree_logical_setpoint(tmp_path, monkeypatch):
     assert jobs == [32.0]
     assert bridge.virtual_targets[zone.unique_id] == 22.5
     assert zone.controller_target_temp == 16.0
+
+
+def test_initial_sensor_grace_does_not_force_idle():
+    bridge, zone, jobs = make_bridge()
+    zone.controller_target_temp = 32.0
+    zone.heat_requested = True
+    zone.external_mapped_at = time.monotonic()
+    bridge._tick_external(zone)
+    assert jobs == []
+    assert zone.pending_target is None
+
+
+def test_missing_first_sensor_expires_after_grace():
+    bridge, zone, jobs = make_bridge()
+    zone.controller_target_temp = 32.0
+    zone.heat_requested = True
+    zone.external_mapped_at = time.monotonic() - 901
+    bridge._tick_external(zone)
+    assert jobs == [16.0]
+
+
+def test_stale_sensor_supersedes_pending_heat():
+    bridge, zone, jobs = make_bridge()
+    zone.pending_target = 32.0
+    zone.external_temp = 20.0
+    zone.external_received_at = time.monotonic() - 901
+    zone.external_first_reading = True
+    bridge._tick_external(zone)
+    assert jobs == [16.0]
+    assert zone.pending_target == 16.0
+    assert zone.external_generation == 1
+
+
+def test_mapping_removed_cancels_old_pending_heat():
+    from types import SimpleNamespace
+    bridge, zone, jobs = make_bridge()
+    zone.pending_target = 32.0
+    zone.controller_target_temp = 16.0
+    old_generation = zone.external_generation
+    bridge._on_message(None, None, SimpleNamespace(
+        topic=f"{bridge.options.base_topic}/external_map/{zone.unique_id}",
+        payload=b"",
+    ))
+    assert zone.external_topic is None
+    assert zone.target_temp == 16.0
+    assert zone.pending_target is None
+    assert zone.external_generation > old_generation
+
+
+def test_existing_heating_zone_mapping_retains_heating_state():
+    from types import SimpleNamespace
+    bridge, zone, jobs = make_bridge()
+    bridge.external_by_zone.clear()
+    bridge.external_by_topic.clear()
+    zone.external_topic = None
+    zone.controller_target_temp = 32.0
+    zone.heat_requested = False
+    bridge._on_message(None, None, SimpleNamespace(
+        topic=f"{bridge.options.base_topic}/external_map/{zone.unique_id}",
+        payload=b"sensor.room_101",
+    ))
+    assert zone.heat_requested is True
+    assert zone.target_temp is not None
