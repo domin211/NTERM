@@ -56,7 +56,7 @@ def test_state_payload_reports_mode_and_falls_back_to_minimum():
     zone = make_zone(current_temp=None, target_temp=None)
     payload = topics.state_payload(zone, TempRange(), mode="off")
 
-    assert payload == {"current_temp": 16.0, "target_temp": 16.0, "mode": "off"}
+    assert payload == {"current_temp": 16.0, "target_temp": 16.0, "mode": "off", "action": "off"}
 
 
 def test_controller_connectivity_discovery_payload():
