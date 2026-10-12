@@ -98,7 +98,7 @@ class Topics:
             "mode": mode,
             "action": (
                 ("heating" if zone.heat_requested else "idle")
-                if zone.external_topic else ("off" if mode == "off" else "idle")
+                if zone.external_topic else ("off" if mode == "off" else "heating")
             ),
         }
 
