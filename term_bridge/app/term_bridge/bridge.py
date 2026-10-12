@@ -160,7 +160,7 @@ class TERMBridge:
             and now - zone.external_received_at <= THERMOSTAT_SENSOR_TIMEOUT_SECONDS
         )
         # Allow a full sensor timeout after mapping activation for the first reading.
-        if not fresh and not zone.external_first_reading and (
+        if not fresh and zone.external_received_at is None and not zone.external_first_reading and (
             zone.external_mapped_at is None
             or now - zone.external_mapped_at < THERMOSTAT_SENSOR_TIMEOUT_SECONDS
         ):
