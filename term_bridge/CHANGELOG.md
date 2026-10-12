@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+- Fixed the companion integration installer omitting `mapping.py`, which prevented Home Assistant loading NTERM Sensor Mapping.
+- Check for a complete bundled integration before copying files.
+- Removed the redundant external sensor configuration field from the add-on UI; pre-existing manual mappings remain supported by the bridge.
+
 ## 0.8.0 (proposed)
 
 - Introduced one NTERM Sensor Manager for multiple rooms with Add/Change/Remove controls.
