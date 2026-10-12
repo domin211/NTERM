@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.2
+
+- Fixed blank sensor-manager menu by including the Home Assistant custom integration English translations and explicit menu labels.
+- Install nested translation files automatically with the companion integration.
+
 ## 0.8.1
 
 - Fixed the companion integration installer omitting `mapping.py`, which prevented Home Assistant loading NTERM Sensor Mapping.
