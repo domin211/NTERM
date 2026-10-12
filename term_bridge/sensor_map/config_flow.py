@@ -84,7 +84,11 @@ class NtermSensorMapOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             mappings = self._mappings()
             mappings[user_input["zone"]] = user_input["sensor"]
-            return self.async_create_entry(title="", data={"mappings": mappings})
+            tombstones = set(self._entry.options.get("pending_removals", []))
+            tombstones.discard(user_input["zone"])
+            return self.async_create_entry(title="", data={
+                "mappings": mappings, "pending_removals": sorted(tombstones),
+            })
         return self.async_show_form(step_id="add", data_schema=vol.Schema({
             vol.Required("zone"): selector.SelectSelector(selector.SelectSelectorConfig(
                 options=rooms, mode=selector.SelectSelectorMode.DROPDOWN)),
@@ -96,8 +100,13 @@ class NtermSensorMapOptionsFlow(config_entries.OptionsFlow):
         if not mappings:
             return self.async_abort(reason="no_mappings")
         if user_input is not None:
-            mappings.pop(user_input["zone"], None)
-            return self.async_create_entry(title="", data={"mappings": mappings})
+            removed = user_input["zone"]
+            mappings.pop(removed, None)
+            tombstones = set(self._entry.options.get("pending_removals", []))
+            tombstones.add(removed)
+            return self.async_create_entry(title="", data={
+                "mappings": mappings, "pending_removals": sorted(tombstones),
+            })
         labels = {r["value"]: r["label"] for r in room_options(self.hass)}
         return self.async_show_form(step_id="remove", data_schema=vol.Schema({
             vol.Required("zone"): selector.SelectSelector(selector.SelectSelectorConfig(
