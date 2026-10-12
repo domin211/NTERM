@@ -25,9 +25,20 @@ The bridge can expose a room as a conventional thermostat using a separate Home 
 Global, intentionally hard-coded settings:
 
 - Heating target: 32 °C; idle target: 16 °C.
-- Hysteresis: ±0.3 °C around the user-selected virtual target.
+- Hysteresis: ±0.5 °C around the user-selected virtual target.
 - Minimum time between heating-state changes: **10 minutes**. The initial decision has no delay.
 - If the external temperature stops arriving for 15 minutes, request idle (16 °C) immediately, bypassing the switching hold.
+
+### Assign sensors through the Home Assistant UI (recommended)
+
+1. Copy the repository's `custom_components/term_bridge_sensor_map` directory into Home Assistant `/config/custom_components/term_bridge_sensor_map`.
+2. Restart Home Assistant. In **Settings → Devices & services → Add integration**, find **TERM Bridge Sensor Mapping**.
+3. Select an **NTERM room thermostat** and its external **temperature sensor** from the dropdowns. Add another integration entry for each room.
+4. To change a room's sensor, open that entry's **Configure** options.
+
+The mapping integration forwards temperature readings every 2 minutes and on state changes. It publishes the mapping through a retained MQTT configuration topic, so you do not need to modify the TERM Bridge add-on options or manually maintain sensor MQTT topics. Existing MQTT thermostats must be discovered before the room dropdown can display them.
+
+The add-on's `external_sensors` list remains available for legacy/manual mappings, but it is **not necessary when you use the UI integration**.
 
 Only the external sensor topic needs to be assigned to each selected zone. Example add-on options:
 
