@@ -62,14 +62,24 @@ class NtermSensorMapOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         if "zone" in self._entry.data:
             return await self.async_step_legacy(user_input)
-        labels = {room["value"]: room["label"] for room in room_options(self.hass)}
-        mapped = ", ".join(f"{labels.get(z, z)} → {sensor}" for z, sensor in self._mappings().items())
-        return self.async_show_menu(
-            step_id="init", menu_options={
-                "add": "Add or change room sensor",
-                "remove": "Remove room sensor",
-            },
-            description_placeholders={"mappings": mapped or "None"},
+        if user_input is not None:
+            if user_input["action"] == "add":
+                return await self.async_step_add()
+            if user_input["action"] == "remove":
+                return await self.async_step_remove()
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Required("action"): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            selector.SelectOptionDict(value="add", label="Add or change room sensor"),
+                            selector.SelectOptionDict(value="remove", label="Remove room sensor"),
+                        ],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+            }),
         )
 
     async def async_step_legacy(self, user_input=None):
