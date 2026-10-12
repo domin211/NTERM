@@ -1,6 +1,6 @@
 name: TERM Bridge
 slug: term_bridge
-version: "5.1.4"
+version: "5.2.0"
 description: Connect HMPD thermostat controllers to Home Assistant through MQTT
 url: https://github.com/domin211/TERM-bridge
 arch:
