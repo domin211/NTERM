@@ -1,6 +1,6 @@
 name: NTERM
 slug: term_bridge
-version: "0.8.2"
+version: "0.8.3"
 description: Connect HMPD thermostat controllers to Home Assistant through MQTT
 url: https://github.com/domin211/NTERM
 arch:
