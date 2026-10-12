@@ -22,6 +22,11 @@ class Zone:
     heat_requested: bool = False
     last_switch_at: float | None = None
     pending_target: float | None = None
+    external_generation: int = 0
+    external_mapped_at: float | None = None
+    external_first_reading: bool = False
+    external_fallback: bool = False
+
     enabled: bool | None = None
     discovered: bool = False
     last_discovery_payload: str | None = None
