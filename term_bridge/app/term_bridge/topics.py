@@ -96,7 +96,10 @@ class Topics:
             "current_temp": current_temp,
             "target_temp": target_temp,
             "mode": mode,
-            "action": ("heating" if zone.heat_requested else "idle") if zone.external_topic else ("off" if mode == "off" else "idle"),
+            "action": (
+                ("heating" if zone.heat_requested else "idle")
+                if zone.external_topic else ("off" if mode == "off" else "idle")
+            ),
         }
 
     def controller_status_payload(self, controller: Controller) -> dict[str, Any]:
