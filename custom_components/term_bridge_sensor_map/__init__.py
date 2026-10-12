@@ -109,6 +109,7 @@ async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     mappings = mapping_for_entry(entry)
     token = object()
     hass.data[DOMAIN]["entries"][entry.entry_id] = {"token": token, "mappings": mappings}
+    await request_clear(hass, set(entry.options.get("pending_removals", [])))
 
     async def publish(zone: str, sensor: str) -> None:
         active = hass.data[DOMAIN]["entries"].get(entry.entry_id)
