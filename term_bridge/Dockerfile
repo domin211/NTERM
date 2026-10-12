@@ -16,6 +16,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 COPY app/ /app/
 COPY hmpd /app/hmpd
+COPY sensor_map/ /opt/nterm-sensor-map/
 
 RUN python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --require-hashes -r /app/requirements.txt \
@@ -25,9 +26,9 @@ RUN python3 -m venv /opt/venv \
 
 ENV PATH="/opt/venv/bin:${PATH}"
 
-LABEL org.opencontainers.image.title="TERM Bridge" \
+LABEL org.opencontainers.image.title="NTERM" \
       org.opencontainers.image.description="HMPD thermostat controller bridge for Home Assistant" \
-      org.opencontainers.image.source="https://github.com/domin211/term-bridge" \
+      org.opencontainers.image.source="https://github.com/domin211/NTERM" \
       org.opencontainers.image.licenses="MIT" \
       io.hass.type="app"
 
