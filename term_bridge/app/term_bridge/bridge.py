@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import logging
+import math
+import os
 import re
 import socket
 import ssl
@@ -37,6 +39,12 @@ from .config import (
     SET_TIMEOUT,
     TARGET_SYNC_INTERVAL,
     TEMPS_TIMEOUT,
+    THERMOSTAT_HEAT_TARGET,
+    THERMOSTAT_IDLE_TARGET,
+    THERMOSTAT_HYSTERESIS,
+    THERMOSTAT_MIN_DWELL_SECONDS,
+    THERMOSTAT_SENSOR_TIMEOUT_SECONDS,
+    THERMOSTAT_TARGETS_PATH,
     Controller,
     Options,
     get_or_create_client_id,
@@ -74,6 +82,10 @@ class TERMBridge:
         self.controllers_by_key = {c.key: c for c in self.controllers}
 
         self.zones: dict[str, Zone] = {}
+        self.external_by_zone = {sensor.zone: sensor.topic for sensor in options.external_sensors}
+        self.external_by_topic = {sensor.topic: sensor.zone for sensor in options.external_sensors}
+        self.sensor_readings: dict[str, tuple[float, float]] = {}
+        self.virtual_targets = self._load_virtual_targets()
         self.latest_temps: dict[str, dict[int, float]] = {}
         self.next_temp_sync_at: dict[str, float] = {c.key: 0.0 for c in self.controllers}
         self.next_target_sync_at: dict[str, float] = {c.key: 0.0 for c in self.controllers}
@@ -109,6 +121,62 @@ class TERMBridge:
         self.mqtt.reconnect_delay_set(min_delay=1, max_delay=30)
 
         self._set_target_re = re.compile(_SET_TARGET_RE_TEMPLATE.format(base=re.escape(options.base_topic)))
+
+    # -- persistent logical setpoints --------------------------------------
+
+    @staticmethod
+    def _load_virtual_targets() -> dict[str, float]:
+        try:
+            data = json.loads(Path(THERMOSTAT_TARGETS_PATH).read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                return {}
+            return {
+                key: float(value)
+                for key, value in data.items()
+                if isinstance(key, str) and isinstance(value, (int, float))
+                and not isinstance(value, bool) and math.isfinite(float(value))
+                and 16.0 <= float(value) <= 32.0
+            }
+        except (FileNotFoundError, ValueError, OSError):
+            return {}
+
+    def _save_virtual_targets(self) -> None:
+        path = Path(THERMOSTAT_TARGETS_PATH)
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temp = path.with_suffix(".tmp")
+            temp.write_text(json.dumps(self.virtual_targets, sort_keys=True), encoding="utf-8")
+            os.replace(temp, path)
+        except OSError:
+            log.exception("Failed to persist external thermostat targets")
+
+    def _tick_external(self, zone: Zone) -> None:
+        if not zone.external_topic or zone.target_temp is None:
+            return
+        now = time.monotonic()
+        fresh = (
+            zone.external_temp is not None
+            and zone.external_received_at is not None
+            and now - zone.external_received_at <= THERMOSTAT_SENSOR_TIMEOUT_SECONDS
+        )
+        # A lost sensor requests idle immediately, bypassing the minimum hold.
+        if not fresh:
+            wants_heat = False
+        elif zone.heat_requested:
+            wants_heat = zone.external_temp < zone.target_temp + THERMOSTAT_HYSTERESIS
+        else:
+            wants_heat = zone.external_temp <= zone.target_temp - THERMOSTAT_HYSTERESIS
+
+        desired = THERMOSTAT_HEAT_TARGET if wants_heat else THERMOSTAT_IDLE_TARGET
+        if zone.pending_target is not None or zone.controller_target_temp == desired:
+            return
+        if (
+            fresh and zone.last_switch_at is not None
+            and now - zone.last_switch_at < THERMOSTAT_MIN_DWELL_SECONDS
+        ):
+            return
+        zone.pending_target = desired
+        self._enqueue_set(zone, desired, reason="external_thermostat")
 
     # -- hmpd binary -----------------------------------------------------
 
@@ -160,6 +228,12 @@ class TERMBridge:
 
     def _make_completion_callback(self, controller: Controller):
         def complete(job: ControllerJob, error: BaseException | None) -> None:
+            if job.kind == "set" and error is not None:
+                zone = self.zones.get(job.zone_unique_id or "")
+                if zone is not None and zone.external_topic:
+                    zone.pending_target = None
+                log.error("External thermostat set failed for %s: %s", job.zone_unique_id, error)
+                return
             if job.kind not in ("temps", "regs"):
                 return
             self.controller_last_error[controller.key] = str(error) if error is not None else None
@@ -193,6 +267,12 @@ class TERMBridge:
         hmpd_cli.run_hmpd(cmd, job.timeout)
 
         zone.controller_target_temp = target
+        if zone.external_topic:
+            previous = zone.heat_requested
+            zone.heat_requested = target == THERMOSTAT_HEAT_TARGET
+            zone.pending_target = None
+            if previous != zone.heat_requested:
+                zone.last_switch_at = time.monotonic()
         if zone.target_temp is None:
             zone.target_temp = target
         self._publish_state(zone)
@@ -252,7 +332,11 @@ class TERMBridge:
                     unique_id=unique_id,
                     current_temp=current_temp,
                     controller_target_temp=data["target_temp"],
-                    target_temp=data["target_temp"],
+                    target_temp=(
+                        self.virtual_targets.get(unique_id, THERMOSTAT_IDLE_TARGET)
+                        if unique_id in self.external_by_zone else data["target_temp"]
+                    ),
+                    external_topic=self.external_by_zone.get(unique_id),
                     enabled=data["enabled"],
                 )
                 self.zones[unique_id] = zone
@@ -265,7 +349,11 @@ class TERMBridge:
                     if zone.target_temp is None:
                         zone.target_temp = data["target_temp"]
                 zone.enabled = data["enabled"]
+                zone.external_topic = self.external_by_zone.get(unique_id)
                 updated += 1
+
+            if zone.external_topic and zone.external_topic in self.sensor_readings:
+                zone.external_temp, zone.external_received_at = self.sensor_readings[zone.external_topic]
 
             if zone.target_temp is None and zone.controller_target_temp is not None:
                 zone.target_temp = zone.controller_target_temp
@@ -432,7 +520,7 @@ class TERMBridge:
         zone.discovered = True
 
     def _publish_state(self, zone: Zone) -> None:
-        mode = "off" if zone.is_off_mode(OFF_MODE_TARGET_THRESHOLD) else "heat"
+        mode = "heat" if zone.external_topic else ("off" if zone.is_off_mode(OFF_MODE_TARGET_THRESHOLD) else "heat")
         payload = json.dumps(self.topics.state_payload(zone, self.temp_range, mode), sort_keys=True)
         if zone.last_state_payload == payload:
             return
@@ -446,6 +534,8 @@ class TERMBridge:
             self.mqtt_connected = True
             log.info("Connected to MQTT broker %s:%s", self.options.mqtt_host, self.options.mqtt_port)
             client.subscribe(self.topics.set_target_subscription())
+            for topic in self.external_by_topic:
+                client.subscribe(topic, qos=1)
             client.subscribe(self.topics.bridge_resync())
             self._publish_bridge_status(True)
             for controller in self.controllers:
@@ -470,6 +560,24 @@ class TERMBridge:
                 threading.Thread(target=self.force_full_republish, daemon=True).start()
                 return
 
+            if topic in self.external_by_topic:
+                try:
+                    value = float(payload)
+                    if not math.isfinite(value) or not 0.0 <= value <= 50.0:
+                        raise ValueError("temperature outside allowed sensor range")
+                except ValueError:
+                    log.warning("Ignoring invalid external temperature topic=%s payload=%r", topic, payload)
+                    return
+                now = time.monotonic()
+                self.sensor_readings[topic] = (value, now)
+                zone = self.zones.get(self.external_by_topic[topic])
+                if zone is not None:
+                    zone.external_temp = value
+                    zone.external_received_at = now
+                    self._publish_state(zone)
+                    self._tick_external(zone)
+                return
+
             match = self._set_target_re.match(topic)
             if match:
                 self._handle_set_target(match.group(1), payload)
@@ -488,6 +596,17 @@ class TERMBridge:
             value = float(payload)
         except ValueError:
             log.warning("Invalid target payload for %s: %s", zone_key, payload)
+            return
+
+        if zone.external_topic:
+            if not math.isfinite(value):
+                return
+            target = min(32.0, max(16.0, round(value * 2) / 2))
+            zone.target_temp = target
+            self.virtual_targets[zone.unique_id] = target
+            self._save_virtual_targets()
+            self._publish_state(zone)
+            self._tick_external(zone)
             return
 
         target = self.temp_range.snap(value)
@@ -581,6 +700,10 @@ class TERMBridge:
                 if (now - last_health_publish) >= HEALTH_PUBLISH_INTERVAL:
                     self._publish_health(force=True)
                     last_health_publish = now
+
+                for zone in list(self.zones.values()):
+                    if zone.external_topic:
+                        self._tick_external(zone)
 
                 for controller in self.controllers:
                     key = controller.key
