@@ -35,9 +35,9 @@ Global, intentionally hard-coded settings:
 
 Rooms without mappings use original HMPD temperature and control behavior. Installing the companion integration does not require you to use it.
 
-The add-on's `external_sensors` list remains available for legacy/manual mappings, but it is **not necessary when you use the UI integration**.
+The add-on configuration no longer exposes `external_sensors`. Use **NTERM Sensor Mapping** to manage external room sensors in one place. Older manual entries in saved options are still recognized for compatibility, but should be migrated to the manager.
 
-Only the external sensor topic needs to be assigned to each selected zone. Example add-on options:
+Legacy manual MQTT mappings (not shown in the add-on settings) previously used:
 
 ```yaml
 external_sensors:
