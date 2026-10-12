@@ -17,7 +17,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     zone = entry.data["zone"]
     sensor = entry.options.get("sensor", entry.data["sensor"])
-    base_topic = entry.options.get("base_topic", entry.data.get("base_topic", "term_bridge")).rstrip("/")
+    base_topic = "term_bridge"
     mapping_topic = f"{base_topic}/external_map/{zone}"
     value_topic = f"{base_topic}/external/{zone}"
     active = object()
