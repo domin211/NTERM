@@ -20,7 +20,7 @@ def owners(entries) -> dict[str, tuple[str, str]]:
     result: dict[str, tuple[str, str]] = {}
     ordered = sorted(
         entries,
-        key=lambda e: (0 if "mappings" in e.data else 1, e.entry_id),
+        key=lambda e: (0 if "mappings" in e.data or "mappings" in e.options else 1, e.entry_id),
     )
     for entry in ordered:
         for zone, sensor in mapping_for_entry(entry).items():
