@@ -40,8 +40,8 @@ from .config import (
     TARGET_SYNC_INTERVAL,
     TEMPS_TIMEOUT,
     THERMOSTAT_HEAT_TARGET,
-    THERMOSTAT_IDLE_TARGET,
     THERMOSTAT_HYSTERESIS,
+    THERMOSTAT_IDLE_TARGET,
     THERMOSTAT_MIN_DWELL_SECONDS,
     THERMOSTAT_SENSOR_TIMEOUT_SECONDS,
     THERMOSTAT_TARGETS_PATH,
@@ -622,7 +622,9 @@ class TERMBridge:
                     self.external_by_topic[sensor_topic] = zone_key
                 else:
                     self.external_by_zone.pop(zone_key, None)
-                log.info("External sensor mapping %s for %s: %s", "enabled" if payload else "removed", zone_key, payload)
+                log.info(
+                    "External sensor mapping %s for %s: %s", "enabled" if payload else "removed", zone_key, payload
+                )
                 zone = self.zones.get(zone_key)
                 if zone is not None:
                     zone.external_topic = sensor_topic if payload else None

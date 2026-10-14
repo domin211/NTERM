@@ -270,7 +270,9 @@ def build_options(raw: dict[str, Any]) -> Options:
         mqtt_tls_key=tls_key,
         hmpd_path=_expect_string(raw, "hmpd_path", DEFAULT_HMPD_PATH, required=True),
         controllers=_build_controllers(raw.get("controllers")),
-        external_sensors=_parse_external_sensors(raw.get("external_sensors"), controllers=_build_controllers(raw.get("controllers"))),
+        external_sensors=_parse_external_sensors(
+            raw.get("external_sensors"), controllers=_build_controllers(raw.get("controllers"))
+        ),
     )
 
 

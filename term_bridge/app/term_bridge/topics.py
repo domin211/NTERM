@@ -90,7 +90,15 @@ class Topics:
         }
 
     def state_payload(self, zone: Zone, temp_range: TempRange, mode: str) -> dict[str, Any]:
-        current_temp = zone.external_temp if zone.external_topic else zone.current_temp
+        # A mapping can be replayed before its first sensor reading (or outlive
+        # the HA entry that published it). Keep the original controller reading
+        # visible until an actual external temperature is available. This only
+        # selects the displayed value; thermostat control uses its own state.
+        current_temp = (
+            zone.external_temp
+            if zone.external_topic and zone.external_temp is not None
+            else zone.current_temp
+        )
         target_temp = zone.target_temp if zone.target_temp is not None else temp_range.minimum
         return {
             "current_temp": current_temp,

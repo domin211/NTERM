@@ -148,8 +148,8 @@ def test_existing_heating_zone_mapping_retains_heating_state():
 
 def test_live_mqtt_mapping_updates_climate_current_temperature():
     """A selected HA sensor's MQTT reading must be visible in climate state."""
-    from types import SimpleNamespace
     import json
+    from types import SimpleNamespace
 
     bridge, zone, jobs = make_bridge()
     # Switch away from the manually configured external topic and use the UI mapping.

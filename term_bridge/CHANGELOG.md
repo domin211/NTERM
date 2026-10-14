@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.6
+
+- Keep the original NTERM controller temperature visible when an external mapping has no sensor reading yet, including replayed retained mappings. Valid external readings still take precedence.
+- Add a channel-5 regression covering all 64 cached temperatures, MQTT discovery identity, external readings, and mapping removal. Heating control, hysteresis, and target logic are unchanged.
+
 ## 0.8.4
 
 - Existing single-room Sensor Mapping entries now expose the same Add/Change/Remove controls as the multi-room manager, without losing their original sensor.

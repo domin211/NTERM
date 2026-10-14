@@ -49,3 +49,35 @@ external_sensors:
 Here `usb0_ttyusb0_0` is a zone key from `term_bridge/usb0_ttyusb0_0/state`. The topic must publish a **plain Celsius number** (e.g. `21.5`) whenever the reading changes and periodically (more frequently than every 15 minutes). Do not retain the sensor reading, because a retained historical reading could be mistaken for a new measurement. Leave `external_sensors: []` if you are not using manual mappings.
 
 **Do not map the same room using both methods.** Use the UI mapping integration for Home Assistant temperature sensors.
+
+### Climate temperature is null although controller temperatures are cached
+
+Temperatures and registers join on the HMPD numeric channel, not the room name
+or Home Assistant entity ID. For usb0 `/dev/ttyUSB0`, channel 5 has bridge ID
+`usb0_ttyusb0_5`, even when the room is named `08 Koupelna` or its HA entity
+is renamed to `climate.koupelna_8`. The bridge caches `temps` readings, merges
+register metadata, and publishes `term_bridge/usb0_ttyusb0_5/state`. MQTT
+climate discovery reads `value_json.current_temp` from that topic. The companion
+Sensor Mapping integration forwards external readings; it has no climate entity
+or climate update coordinator.
+
+Before 0.8.6, an external mapping alone selected `external_temp`, including its
+initial `None` value, hiding a valid controller reading. A retained
+`term_bridge/external_map/usb0_ttyusb0_5` message can enable that mode even when
+no sensor is currently shown in the manager. The manager retries known removals;
+it does not enumerate and clear every orphaned retained mapping or legacy
+manual mapping. External mode is also recognizable by its 0.5 degree target
+step, versus the native controller's 1 degree step.
+
+Version 0.8.6 uses the original controller temperature until a mapped external
+reading exists. Removing a mapping immediately resumes the latest controller
+reading. This display selection does not change sensor timeout handling,
+heating decisions, hysteresis, or target temperatures. A configured sensor's
+last reading and existing control timeout behavior remain unchanged.
+
+To establish the cause on a running installation, inspect the retained mapping,
+the channel's state payload and MQTT discovery temperature topic/template.
+A count of 64 cached readings alone does not establish which temperature is
+selected for display. A historical HA snapshot can suggest external mode, but
+cannot confirm the current retained mapping or registry state. Remove an
+unwanted mapping through the manager so its retained removal is published.

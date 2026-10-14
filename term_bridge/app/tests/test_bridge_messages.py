@@ -218,3 +218,48 @@ def test_registry_removes_retained_topics_for_zones_missing_after_restart(tmp_pa
         bridge.topics.command(stale_id),
     }
     assert all(retain is True for _, _, retain in cleared)
+
+
+def test_channel_five_temperature_survives_mapping_without_reading():
+    """A retained mapping must not hide a valid controller reading with null."""
+    import json
+    from types import SimpleNamespace
+
+    bridge = make_bridge()
+    controller = bridge.controllers[0]
+    unique_id = f"{controller.key}_5"
+    # Channel numbers, room names and HA entity IDs are separate identities.
+    bridge._apply_temps(controller, [f"{idx}: {22.0 if idx == 5 else 19.0}" for idx in range(64)])
+    bridge._apply_regs(controller, ["5 | 08 Koupelna | cur: 21.9 | tgt: 20.0 | EN"])
+    zone = bridge.zones[unique_id]
+    assert zone.current_temp == 22.0
+
+    def state():
+        return [json.loads(payload) for topic, payload, _ in bridge.published
+                if topic == bridge.topics.state(unique_id)][-1]
+
+    assert state()["current_temp"] == 22.0
+    discovery = bridge.topics.discovery_payload(zone, bridge.temp_range)
+    assert discovery["unique_id"] == f"term_bridge_{unique_id}"
+    assert discovery["current_temperature_topic"] == f"term_bridge/{unique_id}/state"
+    assert discovery["current_temperature_template"] == "{{ value_json.current_temp }}"
+
+    def message(topic, payload):
+        bridge._on_message(None, None, SimpleNamespace(topic=topic, payload=payload))
+
+    mapping_topic = f"term_bridge/external_map/{unique_id}"
+    message(mapping_topic, b"sensor.koupelna")
+    assert zone.external_topic is not None
+    assert zone.external_temp is None
+    assert state()["current_temp"] == 22.0
+    # Controller polling continues while waiting for the first external reading.
+    bridge._apply_temps(controller, ["5: 22.1"])
+    assert state()["current_temp"] == 22.1
+    message(f"term_bridge/external/{unique_id}", b"21.75")
+    assert state()["current_temp"] == 21.75
+    bridge._apply_temps(controller, ["5: 22.2"])
+    assert state()["current_temp"] == 21.75
+    message(mapping_topic, b"")
+    assert zone.external_topic is None
+    assert state()["current_temp"] == 22.2
+    assert state()["target_temp"] == zone.controller_target_temp
